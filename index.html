@@ -380,7 +380,7 @@
     .chat-messages { padding: 14px 12px 10px; gap: 14px; }
 
     .bubble { max-width: 88%; font-size: 13px; padding: 10px 13px; }
-    .avatar { width: 28px; height: 28px; font-size: 12px; }
+    .avatar { width: 28px; height: 28px; font-size: 12px; flex-shrink: 0; }
 
     .input-area { padding: 10px 12px; }
     #user-input { font-size: 16px; padding: 9px 12px; } /* 16px prevents iOS zoom */
@@ -389,10 +389,33 @@
     .attach-btn { font-size: 11px; padding: 4px 9px; }
     .sample-chip { font-size: 11px; padding: 4px 10px; }
 
+    /* AI message wrapper goes full width so pdf-card isn't squeezed */
+    .msg.ai > div { width: 100%; min-width: 0; }
+
+    /* PDF quote card — full width, no overflow */
+    div[style*="max-width: 78%"] { max-width: 100% !important; width: 100%; }
+    .pdf-card {
+      padding: 12px;
+      overflow-x: hidden;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .pdf-header-row { flex-direction: column; gap: 6px; }
+    .pdf-header-row .quote-meta { text-align: left; }
+    .pdf-header-row h3 { font-size: 12px; }
+
+    /* Line items: hide Unit Price column on mobile — too cramped */
+    .pdf-table { font-size: 9px; table-layout: fixed; width: 100%; }
+    .pdf-table th, .pdf-table td { padding: 4px; word-break: break-word; }
+    .pdf-table th:nth-child(3),
+    .pdf-table td:nth-child(3) { display: none; }
+    .pdf-table th:nth-child(1), .pdf-table td:nth-child(1) { width: 45%; }
+    .pdf-table th:nth-child(2), .pdf-table td:nth-child(2) { width: 20%; text-align: right; }
+    .pdf-table th:nth-child(4), .pdf-table td:nth-child(4) { width: 35%; text-align: right; }
+
     .summary-grid { grid-template-columns: repeat(2, 1fr); }
-    .pdf-card { padding: 14px; }
-    .pdf-table { font-size: 9px; }
     .pdf-total { font-size: 12px; }
+    .pdf-footer { font-size: 8px; }
     .download-btn { font-size: 13px; }
     .new-quote-btn { font-size: 12px; }
   }
