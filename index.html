@@ -377,10 +377,25 @@
     .badge { font-size: 10px; padding: 4px 8px; }
 
     .chat-wrap { border-radius: 12px; min-height: 0; flex: 1; }
-    .chat-messages { padding: 14px 12px 10px; gap: 14px; }
+    .chat-messages { padding: 14px 8px 10px; gap: 14px; overflow-x: hidden; }
 
     .bubble { max-width: 88%; font-size: 13px; padding: 10px 13px; }
     .avatar { width: 28px; height: 28px; font-size: 12px; flex-shrink: 0; }
+
+    /* AI message row: avatar + content, content takes remaining width */
+    .msg.ai { align-items: flex-start; gap: 6px; width: 100%; }
+    .msg.ai > div:last-child {
+      flex: 1;
+      min-width: 0;
+      max-width: calc(100% - 34px);
+    }
+
+    /* Override any inline max-width so pdf-card goes full width */
+    .msg.ai > div > div[style*="max-width"],
+    div[style*="max-width: 78%"] {
+      max-width: 100% !important;
+      width: 100% !important;
+    }
 
     .input-area { padding: 10px 12px; }
     #user-input { font-size: 16px; padding: 9px 12px; } /* 16px prevents iOS zoom */
@@ -389,29 +404,55 @@
     .attach-btn { font-size: 11px; padding: 4px 9px; }
     .sample-chip { font-size: 11px; padding: 4px 10px; }
 
-    /* AI message wrapper goes full width so pdf-card isn't squeezed */
-    .msg.ai > div { width: 100%; min-width: 0; }
-
-    /* PDF quote card — full width, no overflow */
-    div[style*="max-width: 78%"] { max-width: 100% !important; width: 100%; }
+    /* PDF quote card — full width, clamp, no overflow */
     .pdf-card {
-      padding: 12px;
-      overflow-x: hidden;
+      padding: 10px 8px;
+      overflow: hidden;
       width: 100%;
       box-sizing: border-box;
+      max-width: 100%;
     }
     .pdf-header-row { flex-direction: column; gap: 6px; }
     .pdf-header-row .quote-meta { text-align: left; }
     .pdf-header-row h3 { font-size: 12px; }
 
-    /* Line items: hide Unit Price column on mobile — too cramped */
-    .pdf-table { font-size: 9px; table-layout: fixed; width: 100%; }
-    .pdf-table th, .pdf-table td { padding: 4px; word-break: break-word; }
-    .pdf-table th:nth-child(3),
-    .pdf-table td:nth-child(3) { display: none; }
-    .pdf-table th:nth-child(1), .pdf-table td:nth-child(1) { width: 45%; }
-    .pdf-table th:nth-child(2), .pdf-table td:nth-child(2) { width: 20%; text-align: right; }
-    .pdf-table th:nth-child(4), .pdf-table td:nth-child(4) { width: 35%; text-align: right; }
+    /* ---- LINE ITEMS TABLE ----
+       4 columns: Item | Qty | Unit Price (hidden) | Subtotal
+       Hidden col 3 so only 3 cols remain: Item 50% | Qty 18% | Subtotal 32% */
+    .pdf-table {
+      font-size: 9px;
+      table-layout: fixed;
+      width: 100%;
+      word-break: break-word;
+    }
+    .pdf-table th,
+    .pdf-table td {
+      padding: 4px 3px;
+      overflow: hidden;
+    }
+    /* Hide Unit Price column (col 3) */
+    .pdf-table thead tr th:nth-child(3),
+    .pdf-table tbody tr td:nth-child(3) { display: none; }
+
+    /* Set widths for remaining 3 columns */
+    .pdf-table thead tr th:nth-child(1),
+    .pdf-table tbody tr td:nth-child(1) { width: 50%; text-align: left; }
+    .pdf-table thead tr th:nth-child(2),
+    .pdf-table tbody tr td:nth-child(2) { width: 18%; text-align: right; }
+    .pdf-table thead tr th:nth-child(4),
+    .pdf-table tbody tr td:nth-child(4) { width: 32%; text-align: right; }
+
+    /* ---- COST SUMMARY TABLE ----
+       2 columns: Description | Amount
+       Col 1: ~65%, Col 2: ~35% */
+    .pdf-table.cost-summary-table {
+      table-layout: fixed;
+      width: 100%;
+    }
+    .pdf-table.cost-summary-table th:nth-child(1),
+    .pdf-table.cost-summary-table td:nth-child(1) { width: 65%; text-align: left; word-break: break-word; }
+    .pdf-table.cost-summary-table th:nth-child(2),
+    .pdf-table.cost-summary-table td:nth-child(2) { width: 35%; text-align: right; }
 
     .summary-grid { grid-template-columns: repeat(2, 1fr); }
     .pdf-total { font-size: 12px; }
@@ -787,14 +828,14 @@ Property Manager, 47 Collins St`
             <tbody>${pricingRows}</tbody>
           </table>
 
-          <table class="pdf-table" style="margin-top:10px;">
+          <table class="pdf-table cost-summary-table" style="margin-top:10px;">
             <thead><tr style="background:#F1EFE8;"><th>Cost Summary</th><th style="text-align:right;">Amount</th></tr></thead>
             <tbody>
-              <tr><td>Materials (frames, glass, fittings)</td><td>$${materialTotal.toFixed(2)}</td></tr>
-              <tr><td>Labour &amp; installation (7.5 hrs @ $95/hr)</td><td>$${labourCost.toFixed(2)}</td></tr>
-              <tr><td>Freight &amp; delivery</td><td>$${freightCost.toFixed(2)}</td></tr>
-              <tr><td>Markup (20%)</td><td>$${markup.toFixed(2)}</td></tr>
-              <tr><td>GST (10%)</td><td>$${gst.toFixed(2)}</td></tr>
+              <tr><td>Materials (frames, glass, fittings)</td><td style="text-align:right;">$${materialTotal.toFixed(2)}</td></tr>
+              <tr><td>Labour &amp; installation (7.5 hrs @ $95/hr)</td><td style="text-align:right;">$${labourCost.toFixed(2)}</td></tr>
+              <tr><td>Freight &amp; delivery</td><td style="text-align:right;">$${freightCost.toFixed(2)}</td></tr>
+              <tr><td>Markup (20%)</td><td style="text-align:right;">$${markup.toFixed(2)}</td></tr>
+              <tr><td>GST (10%)</td><td style="text-align:right;">$${gst.toFixed(2)}</td></tr>
             </tbody>
           </table>
 
