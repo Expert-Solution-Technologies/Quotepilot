@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QuotePilot AI</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #F7F6F2;
+    color: #2C2C2A;
+    line-height: 1.6;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  .app {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 24px 20px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+  }
+  /* Header */
+  .header {
+    background: linear-gradient(135deg, #0C3C6E 0%, #185FA5 50%, #2E86D4 100%);
+    border-radius: 14px;
+    padding: 22px 28px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 4px 20px rgba(24,95,165,0.35);
+  }
+  .logo { display: flex; align-items: center; gap: 12px; }
+  .logo-mark {
+    width: 40px; height: 40px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-weight: 700; font-size: 18px;
+    border: 1px solid rgba(255,255,255,0.3);
+  }
+  .logo-text h1 { font-size: 22px; font-weight: 700; color: #fff; }
+  .logo-text p { font-size: 12px; color: rgba(255,255,255,0.7); }
+  .badge {
+    background: rgba(255,255,255,0.18); color: #fff;
+    padding: 5px 10px; border-radius: 6px;
+    font-size: 11px; font-weight: 500;
+    border: 1px solid rgba(255,255,255,0.25);
+  }
+
+  /* Chat container */
+  .chat-wrap {
+    background: #fff;
+    border: 1px solid rgba(0,0,0,0.08);
+    border-radius: 14px;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 520px;
+    overflow: hidden;
+  }
+  .chat-messages {
+    flex: 1;
+    padding: 24px 24px 12px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  /* Message bubbles */
+  .msg {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    animation: fadeUp 0.3s ease;
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .msg.ai { flex-direction: row; }
+  .msg.user { flex-direction: row-reverse; }
+
+  .avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700;
+  }
+  .avatar.ai-av { background: #185FA5; color: #fff; }
+  .avatar.user-av { background: #E6F1FB; color: #185FA5; }
+
+  .bubble {
+    max-width: 78%;
+    padding: 12px 16px;
+    border-radius: 14px;
+    font-size: 14px;
+    line-height: 1.65;
+  }
+  .msg.ai .bubble {
+    background: #EEEDFE;
+    color: #26215C;
+    border-top-left-radius: 4px;
+  }
+  .msg.user .bubble {
+    background: #185FA5;
+    color: #fff;
+    border-top-right-radius: 4px;
+  }
+  .bubble strong { font-weight: 600; }
+
+  /* Typing indicator */
+  .typing-bubble {
+    background: #EEEDFE;
+    border-radius: 14px;
+    border-top-left-radius: 4px;
+    padding: 14px 18px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: #7F77DD;
+    animation: blink 1.4s infinite both;
+  }
+  .dot:nth-child(2) { animation-delay: 0.2s; }
+  .dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes blink {
+    0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
+    40% { opacity: 1; transform: scale(1); }
+  }
+
+  /* Progress status inside chat */
+  .status-bar {
+    background: #F1EFE8;
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 13px;
+    color: #444441;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    margin-top: 4px;
+  }
+  .status-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .status-row .icon { font-size: 14px; width: 18px; text-align: center; }
+  .status-row.done .icon-wrap { color: #1D9E75; }
+  .status-row.active .icon-wrap { }
+  .mini-spinner {
+    width: 13px; height: 13px;
+    border: 2px solid rgba(0,0,0,0.1);
+    border-top-color: #185FA5;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: inline-block;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Summary cards */
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .summary-card {
+    background: #F1EFE8;
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+  .summary-card .slabel { font-size: 10px; color: #5F5E5A; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 2px; }
+  .summary-card .svalue { font-size: 13px; font-weight: 600; color: #2C2C2A; }
+
+  /* PDF preview card */
+  .pdf-card {
+    background: #fff;
+    border: 1px solid rgba(0,0,0,0.1);
+    border-radius: 10px;
+    padding: 20px;
+    margin-top: 10px;
+    max-width: 100%;
+  }
+  .pdf-header-row {
+    border-bottom: 2px solid #185FA5;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+    display: flex; justify-content: space-between; align-items: flex-start;
+  }
+  .pdf-header-row h3 { color: #185FA5; font-size: 13px; font-weight: 700; }
+  .pdf-header-row .quote-meta { text-align: right; font-size: 10px; color: #5F5E5A; }
+  .pdf-section { margin-bottom: 8px; }
+  .pdf-section-label { font-size: 9px; color: #5F5E5A; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
+  .pdf-table { width: 100%; font-size: 10px; border-collapse: collapse; margin-top: 6px; }
+  .pdf-table th { background: #F1EFE8; padding: 5px 7px; text-align: left; font-weight: 600; font-size: 10px; }
+  .pdf-table td { padding: 4px 7px; border-bottom: 1px solid #eee; }
+  .pdf-table td:last-child { text-align: right; }
+  .pdf-total {
+    margin-top: 10px; padding-top: 8px;
+    border-top: 2px solid #185FA5;
+    text-align: right; font-weight: 700;
+    color: #185FA5; font-size: 14px;
+  }
+  .pdf-footer { font-size: 9px; color: #888; margin-top: 10px; padding-top: 8px; border-top: 1px dashed #ddd; }
+
+  .download-btn {
+    display: flex; align-items: center; justify-content: center; gap: 7px;
+    width: 100%; margin-top: 12px;
+    padding: 11px;
+    background: #1D9E75; color: #fff;
+    border: none; border-radius: 8px;
+    font-size: 14px; font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .download-btn:hover { background: #0F6E56; }
+
+  .new-quote-btn {
+    display: flex; align-items: center; justify-content: center; gap: 7px;
+    margin-top: 8px;
+    padding: 9px 18px;
+    background: #F1EFE8; color: #444441;
+    border: 1px solid rgba(0,0,0,0.12); border-radius: 8px;
+    font-size: 13px; font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .new-quote-btn:hover { background: #E0DDD4; }
+
+  /* Demo notice */
+  .demo-notice {
+    background: #FAEEDA;
+    color: #633806;
+    border-left: 3px solid #BA7517;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    margin-top: 4px;
+  }
+
+  /* Input area */
+  .input-area {
+    border-top: 1px solid rgba(0,0,0,0.08);
+    padding: 14px 16px;
+    background: #fff;
+    border-radius: 0 0 14px 14px;
+  }
+
+  .attachment-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+  }
+  .attach-label {
+    font-size: 12px;
+    color: #5F5E5A;
+  }
+  .attach-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 11px;
+    background: #F1EFE8;
+    border: 1px solid rgba(0,0,0,0.1);
+    border-radius: 6px;
+    font-size: 12px;
+    color: #444441;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .attach-btn:hover { background: #D3D1C7; }
+  #file-input { display: none; }
+  .attached-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    background: #E6F1FB;
+    border: 1px solid #B5D4F4;
+    border-radius: 20px;
+    font-size: 12px;
+    color: #0C447C;
+  }
+  .attached-pill .remove {
+    cursor: pointer;
+    font-size: 14px;
+    color: #5F5E5A;
+    line-height: 1;
+  }
+  .attached-pill .remove:hover { color: #993C1D; }
+
+  .input-row {
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+  }
+  #user-input {
+    flex: 1;
+    padding: 10px 14px;
+    border: 1px solid rgba(0,0,0,0.15);
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 14px;
+    resize: none;
+    min-height: 44px;
+    max-height: 160px;
+    line-height: 1.5;
+    overflow-y: auto;
+  }
+  #user-input:focus {
+    outline: none;
+    border-color: #185FA5;
+    box-shadow: 0 0 0 3px rgba(24,95,165,0.1);
+  }
+  #user-input:disabled {
+    background: #F7F6F2;
+    color: #888;
+    cursor: not-allowed;
+  }
+  .send-btn {
+    width: 44px; height: 44px;
+    background: #185FA5; color: #fff;
+    border: none; border-radius: 10px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    transition: background 0.15s;
+    font-size: 18px;
+  }
+  .send-btn:hover { background: #0C447C; }
+  .send-btn:disabled { background: #B5D4F4; cursor: not-allowed; }
+
+  /* Samples hint */
+  .sample-hints {
+    display: flex; gap: 6px; flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+  .sample-chip {
+    padding: 5px 11px;
+    background: #F1EFE8;
+    border: 1px solid rgba(0,0,0,0.08);
+    border-radius: 20px;
+    font-size: 12px;
+    cursor: pointer;
+    color: #444441;
+    transition: background 0.15s;
+  }
+  .sample-chip:hover { background: #D3D1C7; }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">
+      <div class="logo-mark">Q</div>
+      <div class="logo-text">
+        <h1>QuotePilot AI</h1>
+        <p>Automated Quotation System</p>
+      </div>
+    </div>
+    <div class="badge">✦ AI Powered</div>
+  </div>
+
+  <!-- Chat Window -->
+  <div class="chat-wrap">
+    <div class="chat-messages" id="chat-messages">
+      <!-- Initial AI greeting -->
+      <div class="msg ai" id="greeting-msg">
+        <div class="avatar ai-av">Q</div>
+        <div>
+          <div class="bubble">
+            👋 Hi! I'm <strong>QuotePilot</strong>. To generate a quote, please tell me about the customer and their enquiry — or attach a customer notes file.<br><br>
+            Include details like: customer name, location, what they need, dimensions, materials, and any special requirements.
+          </div>
+          <div class="sample-hints" id="sample-hints">
+            <span style="font-size:11px; color:#5F5E5A; align-self:center;">Try a sample:</span>
+            <span class="sample-chip" onclick="loadSample('sliding')">Sliding window enquiry</span>
+            <span class="sample-chip" onclick="loadSample('bifold')">Bifold door request</span>
+            <span class="sample-chip" onclick="loadSample('shopfront')">Shopfront glass</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Input Area -->
+    <div class="input-area">
+      <div class="attachment-bar">
+        <span class="attach-label">📎 Attach customer notes:</span>
+        <label class="attach-btn" for="file-input">
+          ⬆ Upload file
+        </label>
+        <input type="file" id="file-input" accept=".txt,.pdf,.docx,.doc" onchange="handleFileAttach(this)">
+        <span id="attached-pill" class="attached-pill hidden">
+          <span id="attached-name"></span>
+          <span class="remove" onclick="removeFile()">×</span>
+        </span>
+      </div>
+      <div class="input-row">
+        <textarea id="user-input" placeholder="Type customer details and enquiry here…" rows="1"
+          onkeydown="if(event.key==='Enter' && !event.shiftKey){ event.preventDefault(); sendMessage(); }"
+          oninput="autoResize(this)"></textarea>
+        <button class="send-btn" id="send-btn" onclick="sendMessage()">➤</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // ============ SAMPLE DATA ============
+  const samples = {
+    sliding: `Hi, I'm looking to get 3 sliding windows replaced at my home in Camberwell. The existing ones are old aluminium and the rollers are completely shot. Each opening is roughly 1800mm wide by 1200mm tall. I'd like toughened glass this time around because I have young kids running about. The existing frames will need to come out — happy for your team to dispose of them. Property is single storey, ground floor access, easy parking out front. Could you send me a quote at your earliest? Looking to get this sorted in the next few weeks before winter. Thanks, Mark Davidson 0412 555 901`,
+    bifold: `Hello,
+
+Looking for a quote on a 4-panel aluminium bifold door for our living room opening onto the deck. Opening is 3600mm x 2100mm. Would like double-glazed with low-e coating. Existing slider to be removed and disposed.
+
+Sarah Chen, Brighton`,
+    shopfront: `Need quote for shopfront glass replacement — 6 panels of 12mm toughened, each approximately 1200mm x 2400mm. Frameless with patch fittings. CBD location, after-hours install required.
+
+Regards,
+Property Manager, 47 Collins St`
+  };
+
+  const demoData = {
+    summary: "Customer wants <strong>3 aluminium sliding windows replaced</strong> at a residential property in Camberwell. Each opening is approximately <strong>1800mm × 1200mm</strong>. Customer prefers <strong>toughened glass</strong> due to safety concerns with children. Existing aluminium frames are to be <strong>removed and disposed</strong>. Single-storey, ground floor access — straightforward install conditions.",
+    summaryFields: [
+      { label: "Customer", value: "Mark Davidson" },
+      { label: "Project Type", value: "Sliding Window Replacement" },
+      { label: "Material", value: "Aluminium + 6mm Toughened" },
+      { label: "Quantity", value: "3 units" },
+      { label: "Dimensions", value: "1800 × 1200 mm" },
+      { label: "Install Type", value: "Replacement (removal incl.)" },
+      { label: "Location", value: "Camberwell, Ground Floor" },
+      { label: "Urgency", value: "Within 2–3 weeks" }
+    ],
+    pricing: [
+      { item: "Aluminium sliding frame", qty: 18, unit: "lm", price: 48.00, source: "AluTech 2025 Cat" },
+      { item: "6mm toughened glass", qty: 6.48, unit: "sqm", price: 165.00, source: "GlassPro Price List" },
+      { item: "EPDM rubber gasket seal", qty: 18, unit: "lm", price: 7.50, source: "AluTech 2025 Cat" },
+      { item: "Stainless steel roller set", qty: 3, unit: "set", price: 42.00, source: "FastenerHub" },
+      { item: "Flush pull handle (brushed nickel)", qty: 3, unit: "unit", price: 28.00, source: "AluTech 2025 Cat" },
+      { item: "Neutral cure silicone sealant", qty: 2, unit: "tube", price: 14.50, source: "FastenerHub" }
+    ],
+    labour: { total_hours: 7.5 }
+  };
+
+  const prefilled = samples.sliding;
+  let attachedFile = null;
+  let processingDone = false;
+  let userModified = false;
+
+  // Robust pre-fill: tries immediately, then again on DOMContentLoaded,
+  // then again via multiple setTimeout delays to handle SharePoint's
+  // iframe/viewer which may defer script execution past DOMContentLoaded.
+  function applyPrefill() {
+    const inputEl = document.getElementById('user-input');
+    if (!inputEl) return;
+    if (!inputEl.value) {
+      inputEl.value = prefilled;
+      inputEl.style.height = 'auto';
+      inputEl.style.height = Math.min(inputEl.scrollHeight, 160) + 'px';
+    }
+  }
+
+  // Attempt 1: immediately (works in local Chrome)
+  applyPrefill();
+
+  // Attempt 2: after DOMContentLoaded (if script ran before DOM was ready)
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', applyPrefill);
+  }
+
+  // Attempts 3–6: progressive delays to survive SharePoint's deferred rendering
+  [50, 200, 500, 1000].forEach(function(ms) {
+    setTimeout(applyPrefill, ms);
+  });
+
+  // Track if user manually edits the pre-filled text
+  document.addEventListener('input', function(e) {
+    if (e.target && e.target.id === 'user-input') {
+      userModified = e.target.value.trim() !== prefilled.trim();
+    }
+  });
+
+  function autoResize(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 160) + 'px';
+  }
+
+  function loadSample(key) {
+    document.getElementById('user-input').value = samples[key];
+    userModified = samples[key].trim() !== prefilled.trim();
+    autoResize(document.getElementById('user-input'));
+  }
+
+  function handleFileAttach(input) {
+    if (!input.files || !input.files[0]) return;
+    const file = input.files[0];
+    attachedFile = file;
+    document.getElementById('attached-name').textContent = '📄 ' + file.name;
+    document.getElementById('attached-pill').classList.remove('hidden');
+    input.value = '';
+  }
+
+  function removeFile() {
+    attachedFile = null;
+    document.getElementById('attached-pill').classList.add('hidden');
+    document.getElementById('attached-name').textContent = '';
+  }
+
+  function addMessage(type, content, isHTML) {
+    const chat = document.getElementById('chat-messages');
+    const msg = document.createElement('div');
+    msg.className = 'msg ' + type;
+    const avatar = document.createElement('div');
+    avatar.className = 'avatar ' + (type === 'ai' ? 'ai-av' : 'user-av');
+    avatar.textContent = type === 'ai' ? 'Q' : 'U';
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    if (isHTML) bubble.innerHTML = content;
+    else bubble.textContent = content;
+    msg.appendChild(avatar);
+    msg.appendChild(bubble);
+    chat.appendChild(msg);
+    chat.scrollTop = chat.scrollHeight;
+    return msg;
+  }
+
+  function addAIContent(htmlContent) {
+    const chat = document.getElementById('chat-messages');
+    const msg = document.createElement('div');
+    msg.className = 'msg ai';
+    const avatar = document.createElement('div');
+    avatar.className = 'avatar ai-av';
+    avatar.textContent = 'Q';
+    const inner = document.createElement('div');
+    inner.innerHTML = htmlContent;
+    msg.appendChild(avatar);
+    msg.appendChild(inner);
+    chat.appendChild(msg);
+    chat.scrollTop = chat.scrollHeight;
+    return msg;
+  }
+
+  function addTyping() {
+    const chat = document.getElementById('chat-messages');
+    const msg = document.createElement('div');
+    msg.className = 'msg ai';
+    msg.id = 'typing-indicator';
+    const avatar = document.createElement('div');
+    avatar.className = 'avatar ai-av';
+    avatar.textContent = 'Q';
+    const bubble = document.createElement('div');
+    bubble.className = 'typing-bubble';
+    bubble.innerHTML = '<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
+    msg.appendChild(avatar);
+    msg.appendChild(bubble);
+    chat.appendChild(msg);
+    chat.scrollTop = chat.scrollHeight;
+    return msg;
+  }
+
+  function removeTyping() {
+    const t = document.getElementById('typing-indicator');
+    if (t) t.remove();
+  }
+
+  function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  async function sendMessage() {
+    if (processingDone) return;
+
+    const input = document.getElementById('user-input');
+    const text = input.value.trim();
+    const hasFile = attachedFile !== null;
+
+    if (!text && !hasFile) return;
+
+    const shouldShowNotice = hasFile || userModified;
+
+    input.disabled = true;
+    document.getElementById('send-btn').disabled = true;
+    document.getElementById('file-input').disabled = true;
+
+    const hints = document.getElementById('sample-hints');
+    if (hints) hints.classList.add('hidden');
+
+    const userMsg = text || ('📄 Attached: ' + attachedFile.name);
+    addMessage('user', userMsg, false);
+    input.value = '';
+    input.style.height = 'auto';
+    removeFile();
+
+    if (shouldShowNotice) {
+      await delay(400);
+      addAIContent(`
+        <div class="demo-notice">
+          ⚠️For demo purpose use pre-filled details only. Running with pre-filled entry...
+        </div>
+      `);
+      await delay(600);
+    }
+
+    await delay(500);
+    addTyping();
+    await delay(1200);
+    removeTyping();
+
+    const statusId = 'status-' + Date.now();
+    addAIContent(`
+      <div class="bubble" style="background:#EEEDFE; color:#26215C; border-top-left-radius:4px; padding:14px 16px; max-width:78%;">
+        <div style="font-size:13px; font-weight:600; color:#3C3489; margin-bottom:10px;">⚙ Processing your enquiry…</div>
+        <div class="status-bar" id="${statusId}">
+          <div class="status-row" id="s1"><span class="icon"><div class="mini-spinner"></div></span> Extracting customer details &amp; job requirements…</div>
+          <div class="status-row" id="s2" style="opacity:0.4;"><span class="icon">○</span> Searching estimates repository for closest match…</div>
+          <div class="status-row" id="s3" style="opacity:0.4;"><span class="icon">○</span> Pulling bill of materials from matched estimate…</div>
+          <div class="status-row" id="s4" style="opacity:0.4;"><span class="icon">○</span> Checking vendor catalogues for pricing…</div>
+          <div class="status-row" id="s5" style="opacity:0.4;"><span class="icon">○</span> Formatting professional PDF quotation…</div>
+        </div>
+      </div>
+    `);
+
+    const chat = document.getElementById('chat-messages');
+
+    function tickStep(id, nextId) {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = el.innerHTML.replace(/<span class="icon">.*?<\/span>/, '<span class="icon">✅</span>');
+      const nxt = document.getElementById(nextId);
+      if (nxt) {
+        nxt.style.opacity = '1';
+        nxt.innerHTML = nxt.innerHTML.replace('<span class="icon">○</span>', '<span class="icon"><div class="mini-spinner"></div></span>');
+      }
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    await delay(1400); tickStep('s1', 's2');
+    await delay(1600); tickStep('s2', 's3');
+    await delay(1200); tickStep('s3', 's4');
+    await delay(1800); tickStep('s4', 's5');
+    
+    // Final step fix: Added tick for step 5
+    await delay(1200);
+    const s5 = document.getElementById('s5');
+    if (s5) s5.innerHTML = s5.innerHTML.replace(/<span class="icon">.*?<\/span>/, '<span class="icon">✅</span>');
+    
+    chat.scrollTop = chat.scrollHeight;
+    await delay(900);
+
+    addAIContent(`
+      <div>
+        <div class="bubble" style="background:#EEEDFE; color:#26215C; border-top-left-radius:4px;">
+          <div style="font-size:12px; font-weight:700; color:#3C3489; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">✦ Job Summary</div>
+          ${demoData.summary}
+          <div class="summary-grid">
+            ${demoData.summaryFields.map(f => `<div class="summary-card"><div class="slabel">${f.label}</div><div class="svalue">${f.value}</div></div>`).join('')}
+          </div>
+        </div>
+      </div>
+    `);
+    chat.scrollTop = chat.scrollHeight;
+    await delay(800);
+
+    let materialTotal = 0;
+    demoData.pricing.forEach(p => { materialTotal += p.qty * p.price; });
+    const labourRate = 95.00;
+    const labourCost = demoData.labour.total_hours * labourRate;
+    const freightCost = 180.00;
+    const subtotal = materialTotal + labourCost + freightCost;
+    const markup = subtotal * 0.20;
+    const beforeGST = subtotal + markup;
+    const gst = beforeGST * 0.10;
+    const total = beforeGST + gst;
+
+    const pricingRows = demoData.pricing.map(p =>
+      `<tr><td>${p.item}</td><td style="text-align:right;">${p.qty} ${p.unit}</td><td style="text-align:right; color:#0C447C; font-size:9px;">$${p.price.toFixed(2)} <span style="color:#0F6E56;">✓ ${p.source}</span></td><td style="text-align:right;">$${(p.qty*p.price).toFixed(2)}</td></tr>`
+    ).join('');
+
+    addAIContent(`
+      <div style="max-width: 78%;">
+        <div class="bubble" style="background:#EAF3DE; color:#27500A; border-top-left-radius:4px; margin-bottom:8px;">
+          ✅ <strong>Quote generated successfully.</strong> All 6 line items priced from vendor catalogues. Total: <strong>$${total.toFixed(2)} CAD</strong>
+        </div>
+        <div class="pdf-card">
+          <div class="pdf-header-row">
+            <div>
+              <h3>XYZ Door, Window &amp; Glazing Company</h3>
+              <div style="font-size:9px; color:#5F5E5A;">Door, Window &amp; Glazing Specialists</div>
+            </div>
+            <div class="quote-meta">
+              <div style="font-weight:600;">QUOTATION</div>
+              <div>Quote # EST-2026-0148</div>
+              <div>Date: 04 May 2026</div>
+            </div>
+          </div>
+
+          <div class="pdf-section">
+            <div class="pdf-section-label">Bill To</div>
+            <div style="font-size:11px; font-weight:500;">Mark Davidson</div>
+            <div style="font-size:10px; color:#5F5E5A;">Camberwell, VIC · 0412 555 901</div>
+          </div>
+
+          <div class="pdf-section">
+            <div class="pdf-section-label">Scope of Work</div>
+            <div style="font-size:10px;">Supply &amp; install 3× aluminium sliding windows (1800×1200mm) with 6mm toughened glass. Includes removal &amp; disposal of existing frames.</div>
+          </div>
+
+          <div class="pdf-section-label" style="margin-top:8px;">Line Items</div>
+          <table class="pdf-table">
+            <thead>
+              <tr><th>Item</th><th style="text-align:right;">Qty</th><th style="text-align:right;">Unit Price</th><th style="text-align:right;">Subtotal</th></tr>
+            </thead>
+            <tbody>${pricingRows}</tbody>
+          </table>
+
+          <table class="pdf-table" style="margin-top:10px;">
+            <thead><tr style="background:#F1EFE8;"><th>Cost Summary</th><th style="text-align:right;">Amount</th></tr></thead>
+            <tbody>
+              <tr><td>Materials (frames, glass, fittings)</td><td>$${materialTotal.toFixed(2)}</td></tr>
+              <tr><td>Labour &amp; installation (7.5 hrs @ $95/hr)</td><td>$${labourCost.toFixed(2)}</td></tr>
+              <tr><td>Freight &amp; delivery</td><td>$${freightCost.toFixed(2)}</td></tr>
+              <tr><td>Markup (20%)</td><td>$${markup.toFixed(2)}</td></tr>
+              <tr><td>GST (10%)</td><td>$${gst.toFixed(2)}</td></tr>
+            </tbody>
+          </table>
+
+          <div class="pdf-total">TOTAL: $${total.toFixed(2)} CAD</div>
+          <div class="pdf-footer">Quote valid 30 days · Subject to site inspection · 50% deposit on acceptance</div>
+
+          <button class="download-btn" onclick="alert('In production: downloads Quote-EST-2026-0148.pdf')">⬇ Download PDF</button>
+          <button class="new-quote-btn" onclick="resetChat()">↻ Start New Quote</button>
+        </div>
+      </div>
+    `);
+    chat.scrollTop = chat.scrollHeight;
+    processingDone = true;
+  }
+
+  function resetChat() {
+    processingDone = false;
+    const chat = document.getElementById('chat-messages');
+    chat.innerHTML = '';
+
+    const greet = document.createElement('div');
+    greet.className = 'msg ai';
+    greet.id = 'greeting-msg';
+    greet.innerHTML = `
+      <div class="avatar ai-av">Q</div>
+      <div>
+        <div class="bubble">
+          👋 Hi! I'm <strong>QuotePilot</strong>. To generate a quote, please tell me about the customer and their enquiry — or attach a customer notes file.<br><br>
+          Include details like: customer name, location, what they need, dimensions, materials, and any special requirements.
+        </div>
+        <div class="sample-hints" id="sample-hints">
+          <span style="font-size:11px; color:#5F5E5A; align-self:center;">Try a sample:</span>
+          <span class="sample-chip" onclick="loadSample('sliding')">Sliding window enquiry</span>
+          <span class="sample-chip" onclick="loadSample('bifold')">Bifold door request</span>
+          <span class="sample-chip" onclick="loadSample('shopfront')">Shopfront glass</span>
+        </div>
+      </div>
+    `;
+    chat.appendChild(greet);
+
+    const input = document.getElementById('user-input');
+    input.disabled = false;
+    applyPrefill();
+    userModified = false;
+    document.getElementById('send-btn').disabled = false;
+    document.getElementById('file-input').disabled = false;
+    removeFile();
+  }
+</script>
+</body>
+</html>
